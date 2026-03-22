@@ -72,56 +72,39 @@ AGENTS.md               # Full agent documentation (roles, prompts, guardrails, 
 
 ## Getting started (local setup)
 
-### Option A — Browser-only (no backend needed)
-
-Open `passage-v2.html` in a browser. On first load, if no backend is detected, a prompt will appear asking for your Anthropic API key. Paste it in — it is saved to `localStorage` and restored automatically on future visits.
-
-You can also set it manually before the page loads:
-
-```html
-<script>window.ANTHROPIC_API_KEY = 'sk-ant-api03-...';</script>
-```
-
-Or from the browser console at any time:
-
-```javascript
-localStorage.setItem('ANTHROPIC_API_KEY', 'sk-ant-api03-...');
-location.reload();
-```
-
-Get a key at [console.anthropic.com](https://console.anthropic.com).
-
-### Option B — With the backend server (recommended for production)
-
-Two terminals:
-
-**Terminal 1 — Backend (port 8787):**
+### One command
 
 ```bash
-cd server
-cp .env.example .env       # first time only
-# Edit .env and set ANTHROPIC_API_KEY=sk-ant-api03-...
-npm install                # first time only
-npm run dev
+./start.sh
 ```
 
-**Terminal 2 — Frontend:**
+That's it. On first run this installs dependencies, starts the server, and opens `http://localhost:8787/passage-v2.html` in your browser automatically. No `.env` file required — if no API key is found, the app will prompt you for one.
+
+Alternatively:
 
 ```bash
-npx serve .                # from the project root
+npm start        # same as start.sh, without auto-opening the browser
+npm run dev      # same but with file watching (restarts server on changes)
 ```
 
-Then open `http://localhost:3000/passage-v2.html`.
+### API key
 
-The frontend automatically detects a running backend at `localhost:8787`. If it can't reach it and no browser key is set, the API key modal appears.
+The app will show a prompt on first load if no API key is configured. Paste your Anthropic API key (`sk-ant-api03-...`) into the field — it is saved to `localStorage` and restored automatically on every future visit. Get a key at [console.anthropic.com](https://console.anthropic.com).
 
-**To reset to onboarding:**
+If you prefer to configure the key server-side (keeps it out of the browser entirely):
+
+```bash
+cp server/.env.example server/.env
+# Edit server/.env and set ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+### Reset to onboarding
 
 ```javascript
 localStorage.clear(); location.reload();
 ```
 
-**To point the frontend at a deployed backend:**
+### Point at a deployed backend
 
 ```html
 <script>window.PASSAGE_API_BASE = 'https://your-api.example.com';</script>
@@ -131,9 +114,12 @@ localStorage.clear(); location.reload();
 
 ## API endpoints
 
+The frontend and backend run on the same port (`8787`). The server serves `passage-v2.html` and the `js/` folder as static files, so no separate file server is needed.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Liveness check |
+| `GET` | `/passage-v2.html` | Frontend app |
 | `POST` | `/v1/messages` | Anthropic proxy — API key stays server-side, supports streaming |
 | `POST` | `/api/orchestrate/bank-draft` | Multi-agent bank letter pipeline (SSE) |
 
