@@ -20,15 +20,32 @@ const taskDone = {}, taskNotes = {}, wfState = {}, vaultFiles = { cert: [], bank
 let emailOk = false, simCode = '';
 
 // API configuration
-// Priority: window.PASSAGE_API_BASE > direct browser key > localhost backend
-const API_BASE = (typeof window !== 'undefined' && window.PASSAGE_API_BASE)
-  ? window.PASSAGE_API_BASE
-  : 'http://localhost:8787';
-
+// Priority: window.PASSAGE_API_BASE > same-origin (deployed) > localhost backend
+// On Vercel/production, same-origin hits the Express proxy so everyone uses the server ANTHROPIC_API_KEY.
 // Set to true by checkApiConnectivity() in main.js once the backend responds.
 // When the backend is available, all calls go through the proxy regardless of
 // whether a browser key is also present — avoids CORS errors on direct calls.
 window._backendAvailable = false;
+
+function allowsBrowserApiKey() {
+  if (typeof window === 'undefined') return true;
+  if (window.PASSAGE_ALLOW_BROWSER_KEY === true) return true;
+  const h = window.location.hostname;
+  return h === 'localhost' || h === '127.0.0.1';
+}
+
+function apiRoot() {
+  if (typeof window !== 'undefined' && window.PASSAGE_API_BASE) {
+    return String(window.PASSAGE_API_BASE).replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const h = window.location.hostname;
+    if (h && h !== 'localhost' && h !== '127.0.0.1') {
+      return window.location.origin;
+    }
+  }
+  return 'http://localhost:8787';
+}
 
 function isDemoMode() {
   return typeof window !== 'undefined' &&
@@ -37,8 +54,6 @@ function isDemoMode() {
     !window.PASSAGE_API_BASE &&
     !window._backendAvailable;
 }
-
-function apiRoot() { return (API_BASE || 'http://localhost:8787').replace(/\/$/, ''); }
 
 async function anthropicFetch(bodyObj) {
   const directHeaders = {
@@ -61,15 +76,31 @@ async function anthropicFetch(bodyObj) {
       method: 'POST', headers: proxyHeaders, body: JSON.stringify(bodyObj),
     });
   } catch (networkErr) {
-    // Backend unreachable — fall through to key prompt
-    _handleApiKeyError('Could not reach the backend server. Enter your Anthropic API key to continue directly from your browser.');
+    if (allowsBrowserApiKey()) {
+      _handleApiKeyError('Could not reach the backend server. Enter your Anthropic API key to continue directly from your browser.');
+    } else {
+      _notifyHostedApiError('Could not reach the server. Please try again in a moment.');
+    }
     throw networkErr;
   }
 
-  // Intercept auth errors so the user gets a clear path to fix the issue.
+  // Intercept auth errors
   if (res.status === 401 || res.status === 403) {
-    _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+    if (allowsBrowserApiKey()) {
+      _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+    } else {
+      _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
+    }
     throw new Error('authentication_error');
+  }
+
+  if (res.status === 503) {
+    if (allowsBrowserApiKey()) {
+      _handleApiKeyError('The server has no API key configured. Set ANTHROPIC_API_KEY or enter your key below.');
+    } else {
+      _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
+    }
+    throw new Error('service_unavailable');
   }
 
   // Clone the response to peek at non-streaming bodies without consuming the stream.
@@ -78,7 +109,11 @@ async function anthropicFetch(bodyObj) {
     try {
       const d = await clone.json();
       if (d && d.error && d.error.type === 'authentication_error') {
-        _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+        if (allowsBrowserApiKey()) {
+          _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+        } else {
+          _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
+        }
         throw new Error('authentication_error');
       }
     } catch (e) { if (e.message === 'authentication_error') throw e; }
@@ -87,7 +122,16 @@ async function anthropicFetch(bodyObj) {
   return res;
 }
 
+function _notifyHostedApiError(msg) {
+  if (typeof showToast === 'function') showToast(msg, 6000);
+  else if (typeof window !== 'undefined' && window.alert) window.alert(msg);
+}
+
 function _handleApiKeyError(msg) {
+  if (!allowsBrowserApiKey()) {
+    _notifyHostedApiError(msg);
+    return;
+  }
   const modal = document.getElementById('api-key-modal');
   if (!modal) return;
   const note = modal.querySelector('p');

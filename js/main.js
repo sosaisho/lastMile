@@ -33,7 +33,7 @@ async function checkApiConnectivity() {
   } catch (_) {}
   // Backend unreachable — fall back to direct browser mode if a key is saved,
   // otherwise prompt the user to enter one.
-  if (!isDemoMode()) showApiKeyModal();
+  if (!isDemoMode() && allowsBrowserApiKey()) showApiKeyModal();
 }
 
 // ── INIT ──

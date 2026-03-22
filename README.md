@@ -123,9 +123,11 @@ lsof -ti :8787 | xargs kill -9 && npm start
 
 ### API key
 
-The app will show a prompt on first load if no API key is configured. Paste your Anthropic API key (`sk-ant-api03-...`) into the field — it is saved to `localStorage` and restored automatically on every future visit. Get a key at [console.anthropic.com](https://console.anthropic.com).
+**Deployed (Vercel, Railway, etc.):** Set `ANTHROPIC_API_KEY` once in the host’s environment variables. The app uses **same-origin** API calls (`/v1/messages` via the Express proxy), so **visitors do not enter a key** — everyone uses your server key. The browser key modal only appears on `localhost` / `127.0.0.1` when no backend is reachable.
 
-If you prefer to configure the key server-side (keeps it out of the browser entirely):
+**Local development:** If the server is not running or has no key, you’ll be prompted to paste your Anthropic key (`sk-ant-api03-...`); it is saved to `localStorage` for later visits. Get a key at [console.anthropic.com](https://console.anthropic.com).
+
+Server-side key (recommended for local too — keeps the key out of the browser):
 
 ```bash
 cp server/.env.example server/.env
@@ -137,6 +139,8 @@ Or pass it inline at startup:
 ```bash
 ANTHROPIC_API_KEY=sk-ant-api03-... npm start
 ```
+
+**Advanced:** Set `window.PASSAGE_ALLOW_BROWSER_KEY = true` before scripts load to allow the key modal on a non-localhost host (e.g. a shared staging URL).
 
 ### Reset to onboarding
 
