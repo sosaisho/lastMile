@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "server/index.js": {}
-  },
   "routes": [
     { "src": "/js/(.*)", "dest": "/js/$1" },
     { "src": "/passage-v2.html", "dest": "/passage-v2.html" },
