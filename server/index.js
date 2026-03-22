@@ -249,10 +249,15 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
   res.end();
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  Passage is running.\n`);
-  console.log(`  Open: http://localhost:${PORT}/passage-v2.html\n`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.log(`  No ANTHROPIC_API_KEY found — you will be prompted for it in the browser.\n`);
-  }
-});
+// In Vercel serverless, the app is exported as the handler — listen() is not called.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n  Passage is running.\n`);
+    console.log(`  Open: http://localhost:${PORT}/passage-v2.html\n`);
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.log(`  No ANTHROPIC_API_KEY found — you will be prompted for it in the browser.\n`);
+    }
+  });
+}
+
+export default app;
