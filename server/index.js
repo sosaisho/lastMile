@@ -11,7 +11,7 @@ const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
 
 // Prefer ANTHROPIC_API_KEY from the host (e.g. Vercel → Project → Settings → Environment Variables).
 // Optional fallback for private deploys only — if you paste a real key here and push to a public repo, the key is exposed.
-const SERVER_ANTHROPIC_KEY_FALLBACK = '';
+const SERVER_ANTHROPIC_KEY_FALLBACK = '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';
 
 /** Read at request time so serverless runtimes see Vercel-injected env (avoids build-time inlining). */
 function getAnthropicApiKey() {
