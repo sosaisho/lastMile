@@ -1,7 +1,9 @@
 {
   "version": 2,
   "builds": [
-    { "src": "server/index.js", "use": "@vercel/node" }
+    { "src": "server/index.js", "use": "@vercel/node" },
+    { "src": "passage-v2.html", "use": "@vercel/static" },
+    { "src": "js/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/js/(.*)", "dest": "/js/$1" },
