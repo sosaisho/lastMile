@@ -528,6 +528,19 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
         </div>
         </div>
 
+<!-- API KEY MODAL -->
+<div id="api-key-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:14px;max-width:420px;width:100%;padding:28px" onclick="event.stopPropagation()">
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:400;margin-bottom:6px">Connect your API key</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px">To use the AI features — letter drafts, call scripts, task generation, and chat — paste your Anthropic API key below. It stays on your device and is never sent to anyone other than Anthropic.</p>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px">Anthropic API key</div>
+    <input id="api-key-inp" type="password" placeholder="sk-ant-api03-…" autocomplete="off" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:11px 13px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;box-sizing:border-box;margin-bottom:8px" oninput="document.getElementById('api-key-err').textContent=''" onkeydown="if(event.key==='Enter')saveApiKey()"/>
+    <div id="api-key-err" style="font-size:11px;color:var(--red);min-height:16px;margin-bottom:10px"></div>
+    <button onclick="saveApiKey()" style="width:100%;background:var(--gold);color:#0f0e0c;border:none;padding:12px;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px">Save and continue</button>
+    <p style="font-size:11px;color:var(--text3);text-align:center;line-height:1.6">Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--gold)">console.anthropic.com</a>. Your key is saved to your browser's localStorage — clear it with <code style="font-size:10px;background:var(--bg3);padding:1px 4px;border-radius:3px">localStorage.removeItem('ANTHROPIC_API_KEY')</code>.</p>
+  </div>
+</div>
+
 <!-- SEND CONFIRMATION MODAL -->
 <div id="send-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9001;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeSendModal()">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;max-width:480px;width:100%;padding:24px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">

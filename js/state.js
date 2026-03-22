@@ -1,3 +1,16 @@
+// ── API KEY BOOTSTRAP ──
+// If the user previously saved their Anthropic key, restore it now so isDemoMode()
+// returns true before any other code runs. This covers the case where someone opens
+// the app without a backend and has already entered their key once before.
+(function bootstrapApiKey() {
+  try {
+    const saved = localStorage.getItem('ANTHROPIC_API_KEY');
+    if (saved && saved.startsWith('sk-ant-') && !window.ANTHROPIC_API_KEY) {
+      window.ANTHROPIC_API_KEY = saved;
+    }
+  } catch (_) {}
+})();
+
 // ── STATE ──
 // Shared application state — all modules read/write these globals directly.
 const A = {};
@@ -20,27 +33,61 @@ function isDemoMode() {
 
 function apiRoot() { return (API_BASE || 'http://localhost:8787').replace(/\/$/, ''); }
 
-function anthropicFetch(bodyObj) {
+async function anthropicFetch(bodyObj) {
+  const directHeaders = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+    'x-api-key': window.ANTHROPIC_API_KEY,
+    'anthropic-dangerous-direct-browser-iab': 'true',
+  };
+  const proxyHeaders = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' };
+
   if (isDemoMode()) {
-    // Direct browser call — no backend needed.
-    // Uses the anthropic-dangerous-direct-browser-iab header as required by Anthropic
-    // for browser-side API calls. Suitable for demos; use the backend proxy in production.
     return fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': window.ANTHROPIC_API_KEY,
-        'anthropic-dangerous-direct-browser-iab': 'true',
-      },
-      body: JSON.stringify(bodyObj),
+      method: 'POST', headers: directHeaders, body: JSON.stringify(bodyObj),
     });
   }
-  return fetch(apiRoot() + '/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify(bodyObj),
-  });
+
+  let res;
+  try {
+    res = await fetch(apiRoot() + '/v1/messages', {
+      method: 'POST', headers: proxyHeaders, body: JSON.stringify(bodyObj),
+    });
+  } catch (networkErr) {
+    // Backend unreachable — fall through to key prompt
+    _handleApiKeyError('Could not reach the backend server. Enter your Anthropic API key to continue directly from your browser.');
+    throw networkErr;
+  }
+
+  // Intercept auth errors so the user gets a clear path to fix the issue.
+  if (res.status === 401 || res.status === 403) {
+    _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+    throw new Error('authentication_error');
+  }
+
+  // Clone the response to peek at non-streaming bodies without consuming the stream.
+  if (!bodyObj.stream) {
+    const clone = res.clone();
+    try {
+      const d = await clone.json();
+      if (d && d.error && d.error.type === 'authentication_error') {
+        _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
+        throw new Error('authentication_error');
+      }
+    } catch (e) { if (e.message === 'authentication_error') throw e; }
+  }
+
+  return res;
+}
+
+function _handleApiKeyError(msg) {
+  const modal = document.getElementById('api-key-modal');
+  if (!modal) return;
+  const note = modal.querySelector('p');
+  if (note) note.textContent = msg;
+  modal.style.display = 'flex';
+  const inp = document.getElementById('api-key-inp');
+  if (inp) inp.focus();
 }
 
 function orchestrateBankUrl() { return apiRoot() + '/api/orchestrate/bank-draft'; }
