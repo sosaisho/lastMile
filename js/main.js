@@ -1,39 +1,18 @@
-// ── API KEY MODAL ──
-function showApiKeyModal() {
-  const m = document.getElementById('api-key-modal');
-  if (m) { m.style.display = 'flex'; document.getElementById('api-key-inp').focus(); }
-}
+// Legacy no-op — HTML may still call saveApiKey / showApiKeyModal; AI uses the server proxy only.
+function showApiKeyModal() {}
+function saveApiKey() {}
 
-function saveApiKey() {
-  const inp = document.getElementById('api-key-inp');
-  const err = document.getElementById('api-key-err');
-  const key = (inp.value || '').trim();
-  if (!key.startsWith('sk-ant-')) {
-    err.textContent = 'That doesn\'t look like a valid Anthropic key. It should start with sk-ant-.';
-    return;
-  }
-  window.ANTHROPIC_API_KEY = key;
-  try { localStorage.setItem('ANTHROPIC_API_KEY', key); } catch (_) {}
-  document.getElementById('api-key-modal').style.display = 'none';
-  showToast('API key saved. AI features are now active.');
-}
-
-// Check whether AI calls will work. Shows the key modal if neither demo mode
-// nor a reachable backend is available.
+/** Warm-up /health (helps surface local “forgot to run server” early). */
 async function checkApiConnectivity() {
   try {
-    const res = await fetch(apiRoot() + '/health', { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      // Backend is reachable — route all API calls through the proxy.
-      // This avoids CORS errors that occur when calling api.anthropic.com
-      // directly from the browser, even in demo mode.
-      window._backendAvailable = true;
-      return;
-    }
+    const res = await fetch(apiRoot() + '/health', { signal: AbortSignal.timeout(12000) });
+    if (res.ok) return;
   } catch (_) {}
-  // Backend unreachable — fall back to direct browser mode if a key is saved,
-  // otherwise prompt the user to enter one.
-  if (!isDemoMode() && allowsBrowserApiKey()) showApiKeyModal();
+  const h = typeof window !== 'undefined' ? window.location.hostname : '';
+  const local = h === 'localhost' || h === '127.0.0.1';
+  if (local && typeof showToast === 'function') {
+    showToast('Start the API server: npm start (from the project folder). AI needs the backend.', 8000);
+  }
 }
 
 // ── INIT ──

@@ -8,6 +8,17 @@ import { shouldBlockUserMessage, checkDraftSensitivity, COMM_AGENT_PII_RULE } fr
 
 const PORT = Number(process.env.PORT) || 8787;
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
+
+// Prefer ANTHROPIC_API_KEY from the host (e.g. Vercel → Project → Settings → Environment Variables).
+// Optional fallback for private deploys only — if you paste a real key here and push to a public repo, the key is exposed.
+const SERVER_ANTHROPIC_KEY_FALLBACK = '';
+
+/** Read at request time so serverless runtimes see Vercel-injected env (avoids build-time inlining). */
+function getAnthropicApiKey() {
+  const fromHost = String(process.env['ANTHROPIC_API_KEY'] ?? '').trim();
+  const fallback = String(SERVER_ANTHROPIC_KEY_FALLBACK ?? '').trim();
+  return fromHost || fallback;
+}
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
@@ -19,12 +30,17 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.static(join(__dirname, '..')));
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true, service: 'passage-server' });
+  res.json({
+    ok: true,
+    service: 'passage-server',
+    aiConfigured: !!getAnthropicApiKey(),
+  });
 });
 
 /** Anthropic-compatible streaming proxy — API key stays server-side */
 app.post('/v1/messages', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const anthropicApiKey = getAnthropicApiKey();
+  if (!anthropicApiKey) {
     res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured on server' });
     return;
   }
@@ -33,7 +49,7 @@ app.post('/v1/messages', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': anthropicApiKey,
         'anthropic-version': req.headers['anthropic-version'] || '2023-06-01',
       },
       body: JSON.stringify(req.body),
@@ -64,7 +80,8 @@ app.post('/v1/messages', async (req, res) => {
  * Streams SSE: { type: 'trace'|'draft_delta'|'done', ... }
  */
 app.post('/api/orchestrate/bank-draft', async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const anthropicApiKey = getAnthropicApiKey();
+  if (!anthropicApiKey) {
     res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
     return;
   }
@@ -139,7 +156,7 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'x-api-key': anthropicApiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -254,8 +271,8 @@ if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`\n  Passage is running.\n`);
     console.log(`  Open: http://localhost:${PORT}/passage-v2.html\n`);
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.log(`  No ANTHROPIC_API_KEY found — you will be prompted for it in the browser.\n`);
+    if (!getAnthropicApiKey()) {
+      console.log(`  No ANTHROPIC_API_KEY — set it in server/.env (local) or Vercel env (deployed).\n`);
     }
   });
 }

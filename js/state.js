@@ -1,17 +1,3 @@
-// ── API KEY BOOTSTRAP ──
-// If the user previously saved their Anthropic key, restore it now so isDemoMode()
-// returns true before any other code runs. This covers the case where someone opens
-// the app without a backend and has already entered their key once before.
-(function bootstrapApiKey() {
-  try {
-    const saved = localStorage.getItem('ANTHROPIC_API_KEY');
-    if (saved && saved.startsWith('sk-ant-') && saved !== 'sk-ant-YOUR-KEY-HERE' &&
-        (!window.ANTHROPIC_API_KEY || window.ANTHROPIC_API_KEY === 'sk-ant-YOUR-KEY-HERE')) {
-      window.ANTHROPIC_API_KEY = saved;
-    }
-  } catch (_) {}
-})();
-
 // ── STATE ──
 // Shared application state — all modules read/write these globals directly.
 const A = {};
@@ -19,17 +5,11 @@ let qIdx = 0, tasks = [], customTasks = [], selTask = null, draftTxt = '';
 const taskDone = {}, taskNotes = {}, wfState = {}, vaultFiles = { cert: [], bank: [], w2: [], other: [] };
 let emailOk = false, simCode = '';
 
-// API configuration
-// Priority: window.PASSAGE_API_BASE > same-origin (deployed) > localhost backend
-// On Vercel/production, same-origin hits the Express proxy so everyone uses the server ANTHROPIC_API_KEY.
-// Set to true by checkApiConnectivity() in main.js once the backend responds.
-// When the backend is available, all calls go through the proxy regardless of
-// whether a browser key is also present — avoids CORS errors on direct calls.
-window._backendAvailable = false;
+// API: all Anthropic traffic goes through the backend proxy (/v1/messages). On Vercel, same-origin
+// uses the serverless app + ANTHROPIC_API_KEY from project env. No browser API keys.
 
-function allowsBrowserApiKey() {
-  if (typeof window === 'undefined') return true;
-  if (window.PASSAGE_ALLOW_BROWSER_KEY === true) return true;
+function isLocalDev() {
+  if (typeof window === 'undefined') return false;
   const h = window.location.hostname;
   return h === 'localhost' || h === '127.0.0.1';
 }
@@ -47,76 +27,58 @@ function apiRoot() {
   return 'http://localhost:8787';
 }
 
-function isDemoMode() {
-  return typeof window !== 'undefined' &&
-    window.ANTHROPIC_API_KEY &&
-    window.ANTHROPIC_API_KEY !== 'sk-ant-YOUR-KEY-HERE' &&
-    !window.PASSAGE_API_BASE &&
-    !window._backendAvailable;
-}
-
 async function anthropicFetch(bodyObj) {
-  const directHeaders = {
-    'Content-Type': 'application/json',
-    'anthropic-version': '2023-06-01',
-    'x-api-key': window.ANTHROPIC_API_KEY,
-    'anthropic-dangerous-direct-browser-iab': 'true',
-  };
   const proxyHeaders = { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01' };
-
-  if (isDemoMode()) {
-    return fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: directHeaders, body: JSON.stringify(bodyObj),
-    });
-  }
 
   let res;
   try {
     res = await fetch(apiRoot() + '/v1/messages', {
-      method: 'POST', headers: proxyHeaders, body: JSON.stringify(bodyObj),
+      method: 'POST',
+      headers: proxyHeaders,
+      body: JSON.stringify(bodyObj),
     });
   } catch (networkErr) {
-    if (allowsBrowserApiKey()) {
-      _handleApiKeyError('Could not reach the backend server. Enter your Anthropic API key to continue directly from your browser.');
+    if (isLocalDev()) {
+      _notifyHostedApiError('Cannot reach the API server. From the project folder run: npm start (see README).');
     } else {
       _notifyHostedApiError('Could not reach the server. Please try again in a moment.');
     }
     throw networkErr;
   }
 
-  // Intercept auth errors
   if (res.status === 401 || res.status === 403) {
-    if (allowsBrowserApiKey()) {
-      _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
-    } else {
-      _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
-    }
+    _notifyHostedApiError(
+      isLocalDev()
+        ? 'Anthropic rejected the request. Check ANTHROPIC_API_KEY in server/.env.'
+        : 'AI features are temporarily unavailable. Please try again later.',
+    );
     throw new Error('authentication_error');
   }
 
   if (res.status === 503) {
-    if (allowsBrowserApiKey()) {
-      _handleApiKeyError('The server has no API key configured. Set ANTHROPIC_API_KEY or enter your key below.');
-    } else {
-      _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
-    }
+    _notifyHostedApiError(
+      isLocalDev()
+        ? 'Server has no API key. Set ANTHROPIC_API_KEY in server/.env and restart npm start.'
+        : 'AI features are temporarily unavailable. Please try again later.',
+    );
     throw new Error('service_unavailable');
   }
 
-  // Clone the response to peek at non-streaming bodies without consuming the stream.
   if (!bodyObj.stream) {
     const clone = res.clone();
     try {
       const d = await clone.json();
       if (d && d.error && d.error.type === 'authentication_error') {
-        if (allowsBrowserApiKey()) {
-          _handleApiKeyError('The API key on the server is invalid or expired. Enter a working Anthropic API key to continue.');
-        } else {
-          _notifyHostedApiError('AI features are temporarily unavailable. Please try again later.');
-        }
+        _notifyHostedApiError(
+          isLocalDev()
+            ? 'Invalid Anthropic API key. Update ANTHROPIC_API_KEY in server/.env.'
+            : 'AI features are temporarily unavailable. Please try again later.',
+        );
         throw new Error('authentication_error');
       }
-    } catch (e) { if (e.message === 'authentication_error') throw e; }
+    } catch (e) {
+      if (e.message === 'authentication_error') throw e;
+    }
   }
 
   return res;
@@ -125,20 +87,6 @@ async function anthropicFetch(bodyObj) {
 function _notifyHostedApiError(msg) {
   if (typeof showToast === 'function') showToast(msg, 6000);
   else if (typeof window !== 'undefined' && window.alert) window.alert(msg);
-}
-
-function _handleApiKeyError(msg) {
-  if (!allowsBrowserApiKey()) {
-    _notifyHostedApiError(msg);
-    return;
-  }
-  const modal = document.getElementById('api-key-modal');
-  if (!modal) return;
-  const note = modal.querySelector('p');
-  if (note) note.textContent = msg;
-  modal.style.display = 'flex';
-  const inp = document.getElementById('api-key-inp');
-  if (inp) inp.focus();
 }
 
 function orchestrateBankUrl() { return apiRoot() + '/api/orchestrate/bank-draft'; }

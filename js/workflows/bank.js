@@ -238,12 +238,6 @@ async function bankStep3Draft(tid) {
   const formCtx = window._taxAccounts ? `\nAccounts identified from tax scan: ${window._taxAccounts}` : '';
   const payload = { bankName: getWF(tid).data.bankName, acctType: getWF(tid).data.acctType || '', acctNum, context, notes: taskNotes[tid] || '', taxContext: taxCtx, formContext: formCtx, information: { deceasedName: A.name || '', executorRelationship: A.rel || '', state: A.state || '' } };
   let txt = '';
-  // In demo mode (direct browser key, no backend), skip the orchestration endpoint
-  // and use the direct streaming path immediately.
-  if (isDemoMode()) {
-    await bankStep3DraftDirect(tid, acctNum, context, today, taxCtx, formCtx);
-    return;
-  }
   try {
     const r = await fetch(orchestrateBankUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (!r.ok || !r.body) throw new Error('orchestrate HTTP ' + r.status);
