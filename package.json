@@ -1,0 +1,9 @@
+{
+  "name": "lastmile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm install --prefix server --silent && node server/index.js",
+    "dev": "npm install --prefix server --silent && node --watch server/index.js"
+  }
+}

@@ -1,15 +1,22 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { findBankContact } from './lib/knowledge.js';
 import { shouldBlockUserMessage, checkDraftSensitivity, COMM_AGENT_PII_RULE } from './lib/guardrails.js';
 
 const PORT = Number(process.env.PORT) || 8787;
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages';
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
+
+// Serve the frontend (passage-v2.html + js/ folder) from the same port.
+// This means no second terminal — everything runs on http://localhost:8787.
+app.use(express.static(join(__dirname, '..')));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'passage-server' });
@@ -243,5 +250,9 @@ Additional notes: ${notes || 'none'}${taxContext}${formContext}`;
 });
 
 app.listen(PORT, () => {
-  console.log(`Passage server http://localhost:${PORT}`);
+  console.log(`\n  Passage is running.\n`);
+  console.log(`  Open: http://localhost:${PORT}/passage-v2.html\n`);
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log(`  No ANTHROPIC_API_KEY found — you will be prompted for it in the browser.\n`);
+  }
 });
