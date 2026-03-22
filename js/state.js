@@ -5,7 +5,8 @@
 (function bootstrapApiKey() {
   try {
     const saved = localStorage.getItem('ANTHROPIC_API_KEY');
-    if (saved && saved.startsWith('sk-ant-') && !window.ANTHROPIC_API_KEY) {
+    if (saved && saved.startsWith('sk-ant-') && saved !== 'sk-ant-YOUR-KEY-HERE' &&
+        (!window.ANTHROPIC_API_KEY || window.ANTHROPIC_API_KEY === 'sk-ant-YOUR-KEY-HERE')) {
       window.ANTHROPIC_API_KEY = saved;
     }
   } catch (_) {}
