@@ -88,7 +88,7 @@ git commit -m "Update onboarding copy and flow"
 git push origin v2-nia
 ```
 
-Then tell Sosa to pull `v2-nia` (or open a PR later if needed).
+Then tell Sosai to pull `v2-nia` (or open a PR later if needed).
 
 ---
 
