@@ -54,24 +54,29 @@ If your folder is somewhere else, just `cd` into that folder first.
 
 ---
 
-## 3) Use Claude in the web browser with this project
+## 3) Set up Cursor on your laptop (beginner steps)
 
-If you want to use Claude on claude.ai (not Cursor), do this:
+### A) Open the project in Cursor
 
-1. Open [https://claude.ai](https://claude.ai) and start a new chat.
-2. In your `lastMile` folder, drag in the file(s) you want Claude to edit (for example `README.md`, `passage-v2.html`, or files inside `js/`).
-3. Ask Claude for the exact changes you want.
-4. Copy Claude's updated code back into the same local file in your project.
-5. Save the file, run `npm start` (or refresh if already running), and test in the browser.
-6. If it looks good, commit and push to `v2-nia`.
+1. Open Cursor.
+2. Click **File -> Open Folder**.
+3. Choose your `lastMile` folder.
+4. In the left file list, you should see files like `README.md`, `passage-v2.html`, and the `js` folder.
 
-Important:
+### B) Open the built-in chat
 
-- Claude web does not directly edit your local files automatically.
-- You still need to paste changes into your local project and test before pushing.
-- For big changes, do one file at a time so it's easier to verify.
+1. In Cursor, open the AI chat panel (right side).
+2. Start a new chat.
+3. Keep your request simple, like:
+   - "Update the onboarding text to be friendlier."
+   - "Fix this error in `js/chat.js`."
 
----
+### C) Apply changes safely
+
+1. Let Cursor make the change.
+2. Read the changed file quickly.
+3. Test in browser at `http://localhost:8787/passage-v2.html`.
+4. If good, keep it. If not, ask Cursor to revise.
 
 ## 4) Save and push your changes
 
@@ -87,7 +92,41 @@ Then tell Sosa to pull `v2-nia` (or open a PR later if needed).
 
 ---
 
-## 5) If something breaks
+## 5) Cursor prompt guide for safe pull + push
+
+Copy/paste these prompts into Cursor chat when needed.
+
+### A) Before you start coding (pull latest)
+
+```text
+Please help me safely update my branch before coding.
+1) Confirm I am on branch v2-nia
+2) Pull latest from origin/v2-nia
+3) Show me git status and confirm I am up to date
+Do not change any code files in this step.
+```
+
+### B) After you finish changes (commit + push)
+
+```text
+Please help me safely commit and push my changes on v2-nia.
+1) Show git status and git diff summary first
+2) Propose a clear commit message
+3) Commit my current changes
+4) Push to origin/v2-nia
+5) Show final git status so I know it worked
+```
+
+### C) If there is a merge conflict
+
+```text
+I got a merge conflict. Please explain what happened in simple words and guide me step by step.
+Do not run destructive commands.
+```
+
+---
+
+## 6) If something breaks
 
 Try these in order:
 
@@ -102,21 +141,6 @@ localStorage.clear(); location.reload();
 4. Ask Claude in Cursor:
    - "I got this error. Explain in simple terms and fix it."
    - Paste the exact error text.
-
----
-
-## 6) Super short daily routine
-
-```bash
-cd lastMile
-git checkout v2-nia
-git pull origin v2-nia
-npm start
-```
-
-Then build with Claude, test, commit, and push.
-
----
 
 ## 7) Important safety notes
 
