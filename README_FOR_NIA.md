@@ -1,73 +1,75 @@
 # Last Mile — Simple Guide for Nia
 
-This is a quick guide to help you pull the latest code and keep building with Claude in Cursor.
+This is a quick guide to help you pull the latest code and keep building with Claude in Cursor from your own laptop.
 
-## 1) First-time setup
+## 1) First-time setup (one time)
 
-Open Terminal and run:
+### A) Install tools
+
+- Install Git: [https://git-scm.com/downloads](https://git-scm.com/downloads)
+- Install Node.js LTS (includes npm): [https://nodejs.org](https://nodejs.org)
+- Install Cursor: [https://cursor.com](https://cursor.com)
+
+### B) Clone the repo
+
+In Terminal:
 
 ```bash
-cd /Users/sosaisho/lastMile
+git clone https://github.com/sosaisho/lastMile.git
+cd lastMile
+```
+
+### C) Switch to your branch
+
+```bash
+git checkout v2-nia
+```
+
+### D) Run the app
+
+```bash
 npm start
 ```
 
-What this does:
-- Installs anything needed
-- Starts the app server
-- Opens the app at `http://localhost:8787/passage-v2.html`
+Then open:
 
-Keep this terminal window open while working.
+`http://localhost:8787/passage-v2.html`
+
+Keep this terminal window open while you work.
 
 ---
 
 ## 2) Every time you start working
 
-### Step A — Open project
-Open Cursor with this folder:
-
-`/Users/sosaisho/lastMile`
-
-### Step B — Go to your branch
-In Terminal:
+Open Terminal in your project folder and run:
 
 ```bash
-cd /Users/sosaisho/lastMile
+cd lastMile
 git checkout v2-nia
-```
-
-### Step C — Pull latest changes
-In Terminal:
-
-```bash
 git pull origin v2-nia
-```
-
-If you also want the newest changes from `main`, ask Sosa first, then:
-
-```bash
-git pull origin main
-```
-
-### Step D — Run app
-
-```bash
 npm start
 ```
 
+If your folder is somewhere else, just `cd` into that folder first.
+
 ---
 
-## 3) How to "vibe code" with Claude in Cursor
+## 3) Use Claude in the web browser with this project
 
-Use simple prompts like:
-- "Update onboarding wording to feel friendlier."
-- "Make this button text clearer for non-technical users."
-- "Add a new section to the dashboard with a simple explanation."
-- "Fix this error: [paste error message]."
+If you want to use Claude on claude.ai (not Cursor), do this:
 
-Best practice:
-- Ask for one small change at a time
-- Test after each change
-- Keep prompts plain English
+1. Open [https://claude.ai](https://claude.ai) and start a new chat.
+2. In your `lastMile` folder, drag in the file(s) you want Claude to edit (for example `README.md`, `passage-v2.html`, or files inside `js/`).
+3. Ask Claude for the exact changes you want.
+4. Copy Claude's updated code back into the same local file in your project.
+5. Save the file, run `npm start` (or refresh if already running), and test in the browser.
+6. If it looks good, commit and push to `v2-nia`.
+
+Important:
+
+- Claude web does not directly edit your local files automatically.
+- You still need to paste changes into your local project and test before pushing.
+- For big changes, do one file at a time so it's easier to verify.
 
 ---
 
@@ -76,7 +78,6 @@ Best practice:
 When your edits look good:
 
 ```bash
-cd /Users/sosaisho/lastMile
 git add .
 git commit -m "Update onboarding copy and flow"
 git push origin v2-nia
@@ -91,7 +92,7 @@ Then tell Sosa to pull `v2-nia` (or open a PR later if needed).
 Try these in order:
 
 1. Stop server (`Ctrl + C`) and run `npm start` again
-2. Refresh browser with `Cmd + Shift + R`
+2. Refresh browser (`Cmd + Shift + R` on Mac, `Ctrl + Shift + R` on Windows)
 3. Reset app state in browser console:
 
 ```js
@@ -107,7 +108,7 @@ localStorage.clear(); location.reload();
 ## 6) Super short daily routine
 
 ```bash
-cd /Users/sosaisho/lastMile
+cd lastMile
 git checkout v2-nia
 git pull origin v2-nia
 npm start
